@@ -1,6 +1,5 @@
 """Google Cloud Vision API integration for OCR + bounding box extraction."""
 
-import base64
 import os
 from typing import Any, Dict, List
 
@@ -42,12 +41,6 @@ def _extract_text_blocks(response: Dict[str, Any]) -> List[Dict[str, Any]]:
     }
     """
     annotations = response.get("responses", [{}])[0]
-
-    # Full text for Gemini context
-    full_text = ""
-    full_text_annotation = annotations.get("fullTextAnnotation")
-    if full_text_annotation:
-        full_text = full_text_annotation.get("text", "")
 
     # Individual text blocks with bounding boxes
     text_annotations = annotations.get("textAnnotations", [])
