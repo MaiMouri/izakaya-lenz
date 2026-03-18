@@ -70,8 +70,8 @@ def _get_client() -> genai.Client:
     return genai.Client(api_key=GEMINI_API_KEY)
 
 
-def _strip_fences(text: str) -> str:
-    """Remove markdown code fences if present."""
+def _parse_gemini_response(text: str) -> Dict[str, Any]:
+    """Parse Gemini's response, handling potential markdown fences."""
     cleaned = text.strip()
     if cleaned.startswith("```"):
         lines = cleaned.split("\n")
@@ -79,7 +79,7 @@ def _strip_fences(text: str) -> str:
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
         cleaned = "\n".join(lines)
-    return cleaned.strip()
+    return json.loads(cleaned)
 
 
 async def structure_menu(
