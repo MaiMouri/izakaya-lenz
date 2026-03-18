@@ -1,8 +1,7 @@
 """Translate endpoint: Image → Vision OCR → DB cache → Gemini → Response."""
 
-import base64
 import json
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
