@@ -82,64 +82,6 @@ def _strip_fences(text: str) -> str:
     return cleaned.strip()
 
 
-def _repair_truncated_json(text: str) -> Dict[str, Any]:
-    """
-    Attempt to salvage partial JSON by extracting complete items.
-    Strategy: find all complete item objects inside "items": [...] and re-wrap them.
-    """
-    import re
-    # Find all complete {...} objects in the items array
-    items = []
-    depth = 0
-    obj_start = None
-    in_string = False
-    escape_next = False
-
-    for i, ch in enumerate(text):
-        if escape_next:
-            escape_next = False
-            continue
-        if ch == "\\" and in_string:
-            escape_next = True
-            continue
-        if ch == '"':
-            in_string = not in_string
-            continue
-        if in_string:
-            continue
-        if ch == "{":
-            if depth == 0:
-                obj_start = i
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0 and obj_start is not None:
-                try:
-                    obj = json.loads(text[obj_start:i + 1])
-                    # Only keep objects that look like menu items
-                    if "name_jp" in obj or "name_en" in obj:
-                        items.append(obj)
-                except json.JSONDecodeError:
-                    pass
-                obj_start = None
-
-    if items:
-        print(f"[gemini] Repaired truncated JSON — recovered {len(items)} item(s)")
-        return {"items": items}
-
-    raise ValueError("Could not recover any items from malformed Gemini response")
-
-
-def _parse_gemini_response(text: str) -> Dict[str, Any]:
-    """Parse Gemini's response, handling markdown fences and truncated JSON."""
-    cleaned = _strip_fences(text)
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError as e:
-        print(f"[gemini] JSON parse error: {e} — attempting repair")
-        return _repair_truncated_json(cleaned)
-
-
 async def structure_menu(
     full_text: str,
     blocks: List[Dict[str, Any]],
