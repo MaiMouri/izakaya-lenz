@@ -1,25 +1,17 @@
-import React from 'react';
+import { MenuItem } from '../types';
 
-/**
- * Hotspot – transparent overlay positioned via Vision API bbox.
- *
- * Props:
- *   item          – dish data { name_jp, name_en, price_jpy, allergens, confidence, bbox }
- *   scaleX        – displayWidth / imageNaturalWidth
- *   scaleY        – displayHeight / imageNaturalHeight
- *   showEnLabel   – show EN name inline (name only, no price)
- *   onTap         – called when user taps without dragging
- */
-export default function Hotspot({
-  item,
-  scaleX,
-  scaleY,
-  showEnLabel,
-  onTap,
-}) {
+interface HotspotProps {
+  item: MenuItem;
+  scaleX: number;
+  scaleY: number;
+  showEnLabel: boolean;
+  onTap: () => void;
+}
+
+export default function Hotspot({ item, scaleX, scaleY, showEnLabel, onTap }: HotspotProps) {
   const { bbox, name_en, name_jp, confidence } = item;
 
-  const style = {
+  const style: React.CSSProperties = {
     position: 'absolute',
     left: bbox.x * scaleX,
     top: bbox.y * scaleY,
@@ -38,14 +30,10 @@ export default function Hotspot({
   };
 
   return (
-    <div
-      className="hotspot"
-      style={style}
-      data-jp={name_jp}
-      onClick={onTap}
-    >
-      {/* Small arrow badge – visible on hover via CSS */}
+    <div className="hotspot" style={style} data-jp={name_jp} onClick={onTap}>
+      {/* Arrow badge – visible on hover via CSS */}
       <div
+        className="tap-badge"
         style={{
           position: 'absolute',
           right: -10,
@@ -65,7 +53,6 @@ export default function Hotspot({
           transition: 'opacity .2s',
           pointerEvents: 'none',
         }}
-        className="tap-badge"
       >
         →
       </div>

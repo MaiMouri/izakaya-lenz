@@ -1,31 +1,41 @@
-import React from 'react';
+import { MenuItem, Currency, CurrencySymbol } from '../types';
 
-/**
- * DishPopup – bottom-sheet popup showing full dish details.
- *
- * Props:
- *   item           – dish data or null
- *   isOpen         – boolean
- *   onClose        – callback
- *   currency       – "USD" | "EUR" | "GBP"
- *   exchangeRate   – number (JPY multiplier)
- *   currencySymbol – "$" | "€" | "£"
- */
-export default function DishPopup({ item, isOpen, onClose, currency, exchangeRate, currencySymbol }) {
+interface DishPopupProps {
+  item: MenuItem | null;
+  isOpen: boolean;
+  onClose: () => void;
+  currency: Currency;
+  exchangeRate: number;
+  currencySymbol: CurrencySymbol;
+}
+
+const HIGH_RISK_ALLERGENS = ['Egg', 'Shellfish', 'Fish', 'Peanut', 'Tree Nut', 'Milk'];
+
+function allergenClass(allergen: string): 'danger' | 'warn' {
+  return HIGH_RISK_ALLERGENS.some((h) =>
+    allergen.toLowerCase().includes(h.toLowerCase())
+  )
+    ? 'danger'
+    : 'warn';
+}
+
+const ALLERGEN_STYLES: Record<'warn' | 'danger', React.CSSProperties> = {
+  warn: { background: '#fff4e0', color: '#c97a00', border: '1px solid #ffe5a0' },
+  danger: { background: '#fdecea', color: '#c0392b', border: '1px solid #f9c6c0' },
+};
+
+export default function DishPopup({
+  item,
+  isOpen,
+  onClose,
+  currency,
+  exchangeRate,
+  currencySymbol,
+}: DishPopupProps) {
   if (!item) return null;
 
   const { name_jp, name_en, description_en, price_jpy, allergens = [], confidence } = item;
-
-  const converted = price_jpy
-    ? (price_jpy * exchangeRate).toFixed(2)
-    : null;
-
-  // Allergen severity classification
-  const highRisk = ['Egg', 'Shellfish', 'Fish', 'Peanut', 'Tree Nut', 'Milk'];
-  function allergenClass(a) {
-    if (highRisk.some(h => a.toLowerCase().includes(h.toLowerCase()))) return 'danger';
-    return 'warn';
-  }
+  const converted = price_jpy != null ? (price_jpy * exchangeRate).toFixed(2) : null;
 
   return (
     <>
@@ -95,8 +105,15 @@ export default function DishPopup({ item, isOpen, onClose, currency, exchangeRat
         </button>
 
         <div style={{ padding: '16px 22px 28px' }}>
-          {/* Header: names + price */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+          {/* Header */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: 12,
+            }}
+          >
             <div>
               <div
                 style={{
@@ -114,7 +131,7 @@ export default function DishPopup({ item, isOpen, onClose, currency, exchangeRat
               </div>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
-              {price_jpy && (
+              {price_jpy != null && (
                 <div
                   style={{
                     fontFamily: "'Shippori Mincho', serif",
@@ -158,28 +175,21 @@ export default function DishPopup({ item, isOpen, onClose, currency, exchangeRat
                 Allergens detected
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {allergens.map((a) => {
-                  const cls = allergenClass(a);
-                  const styles = {
-                    warn: { background: '#fff4e0', color: '#c97a00', border: '1px solid #ffe5a0' },
-                    danger: { background: '#fdecea', color: '#c0392b', border: '1px solid #f9c6c0' },
-                  };
-                  return (
-                    <span
-                      key={a}
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 500,
-                        padding: '4px 10px',
-                        borderRadius: 8,
-                        letterSpacing: '.03em',
-                        ...styles[cls],
-                      }}
-                    >
-                      {a}
-                    </span>
-                  );
-                })}
+                {allergens.map((a) => (
+                  <span
+                    key={a}
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 500,
+                      padding: '4px 10px',
+                      borderRadius: 8,
+                      letterSpacing: '.03em',
+                      ...ALLERGEN_STYLES[allergenClass(a)],
+                    }}
+                  >
+                    {a}
+                  </span>
+                ))}
               </div>
             </div>
           )}
@@ -200,11 +210,13 @@ export default function DishPopup({ item, isOpen, onClose, currency, exchangeRat
                   : { background: '#fff4e0', color: '#c97a00' }),
               }}
             >
-              {confidence === 'high' ? '✓ High OCR confidence' : '⚠ Low confidence — verify with staff'}
+              {confidence === 'high'
+                ? '✓ High OCR confidence'
+                : '⚠ Low confidence — verify with staff'}
             </div>
           )}
 
-          {/* Mandatory allergy disclaimer */}
+          {/* Allergy disclaimer */}
           <div
             style={{
               marginTop: 14,
@@ -219,7 +231,8 @@ export default function DishPopup({ item, isOpen, onClose, currency, exchangeRat
           >
             <span style={{ fontSize: 14 }}>⚠️</span>
             <p style={{ fontSize: 11, color: '#7a6030', lineHeight: 1.6 }}>
-              <strong>AI-estimated.</strong> Always confirm allergy info with staff if you have a food allergy.
+              <strong>AI-estimated.</strong> Always confirm allergy info with staff if you have a
+              food allergy.
             </p>
           </div>
         </div>
