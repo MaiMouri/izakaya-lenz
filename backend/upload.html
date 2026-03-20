@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Izakaya Lens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:    #0f0d0b;
+  --paper:  #f7f2ea;
+  --lantern:#e8420a;
+  --ember:  #f4a140;
+  --mist:   #c8bfb0;
+  --smoke:  #2e2924;
+  --cream:  #fdf8f0;
+  --safe:   #2d7a4f;
+  --warn:   #c97a00;
+  --danger: #c0392b;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:#141210;
+  min-height:100vh;
+  display:flex;flex-direction:column;
+}
+.top-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:max(env(safe-area-inset-top,14px),14px) 20px 12px;
+  flex-shrink:0;
+}
+.app-logo{
+  font-family:'Shippori Mincho',serif;font-size:18px;font-weight:800;
+  color:var(--paper);display:flex;align-items:center;gap:7px;
+}
+.logo-dot{width:7px;height:7px;border-radius:50%;background:var(--lantern);box-shadow:0 0 10px var(--lantern);}
+.hint-label{font-size:11px;color:var(--mist);background:var(--smoke);padding:5px 12px;border-radius:20px;}
+
+/* ── Upload screen ── */
+#uploadScreen{padding:0 16px 28px;}
+.drop-zone{
+  border:2px dashed #3a3530;border-radius:20px;padding:40px 20px;
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  cursor:pointer;transition:border-color .2s,background .2s;
+  background:#1a1510;
+}
+.drop-zone.dragover{border-color:var(--lantern);background:rgba(232,66,10,.06);}
+.drop-zone.dragover .dz-icon{transform:scale(1.1);}
+.dz-icon{font-size:40px;transition:transform .2s;}
+.dz-title{font-size:15px;font-weight:600;color:var(--paper);}
+.dz-sub{font-size:12px;color:var(--mist);text-align:center;line-height:1.6;}
+.dz-btn{
+  margin-top:4px;padding:10px 28px;border-radius:12px;
+  background:var(--lantern);color:white;border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
+  transition:opacity .15s;
+}
+.dz-btn:hover{opacity:.88;}
+.cam-btn{
+  margin-top:10px;width:100%;padding:11px;border-radius:14px;
+  background:var(--smoke);border:1px solid #3a3530;color:var(--mist);
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:border-color .2s,color .2s;
+}
+.cam-btn:hover{border-color:#5a5045;color:var(--paper);}
+#fileInput{display:none;}
+.disclaimer-banner{
+  margin-top:14px;background:var(--smoke);border-radius:14px;
+  padding:10px 14px;display:flex;align-items:flex-start;gap:10px;
+}
+.db-icon{font-size:16px;margin-top:1px;}
+.db-text{font-size:11px;color:var(--mist);line-height:1.6;}
+.db-text strong{color:var(--paper);}
+
+/* ── Result screen ── */
+#resultScreen{display:none;flex-direction:column;}
+.photo-container{
+  position:relative;margin:0 16px;border-radius:20px;overflow:hidden;
+  background:#1a1510;border:1px solid #2a2520;
+}
+.photo-container img{width:100%;display:block;}
+.scan-overlay{
+  position:absolute;inset:0;background:rgba(10,8,6,.78);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;border-radius:20px;z-index:10;transition:opacity .4s ease;
+}
+.scan-overlay.hidden{opacity:0;pointer-events:none;}
+.scan-spinner{
+  width:48px;height:48px;border:3px solid rgba(232,66,10,.2);
+  border-top-color:var(--lantern);border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.scan-text{font-size:13px;color:var(--mist);letter-spacing:.08em;text-transform:uppercase;}
+.scan-progress{width:140px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;}
+.scan-progress-fill{height:100%;background:var(--lantern);border-radius:2px;animation:progress 3s ease forwards;}
+@keyframes progress{from{width:0}to{width:90%}}
+
+.hotspot{
+  position:absolute;border-radius:8px;
+  border:2px solid rgba(232,66,10,0);background:rgba(232,66,10,0);
+  cursor:pointer;transition:all .15s ease;
+}
+.hotspot:hover,.hotspot.pulsing{
+  border-color:rgba(232,66,10,.7);background:rgba(232,66,10,.12);
+  box-shadow:0 0 0 3px rgba(232,66,10,.15),inset 0 0 12px rgba(232,66,10,.08);
+}
+.hotspot.active{
+  border-color:var(--lantern);background:rgba(232,66,10,.2);
+  box-shadow:0 0 0 4px rgba(232,66,10,.25);
+}
+.tap-badge{
+  position:absolute;right:-10px;top:50%;transform:translateY(-50%);
+  width:22px;height:22px;border-radius:50%;background:var(--lantern);
+  box-shadow:0 0 12px rgba(232,66,10,.6);display:flex;align-items:center;
+  justify-content:center;font-size:10px;color:white;
+  opacity:0;transition:opacity .2s;pointer-events:none;
+}
+.hotspot:hover .tap-badge,.hotspot.pulsing .tap-badge{opacity:1;}
+.en-overlay-label{
+  display:none;position:absolute;inset:0;background:rgba(10,8,5,.82);
+  backdrop-filter:blur(2px);border-radius:6px;align-items:center;
+  justify-content:space-between;padding:0 10px 0 8px;gap:6px;
+  pointer-events:none;animation:fadeInLabel .2s ease forwards;
+}
+@keyframes fadeInLabel{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.en-overlay-label.visible{display:flex;}
+.en-name{font-size:12px;font-weight:500;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.en-price{font-size:11px;color:var(--ember);font-weight:600;white-space:nowrap;flex-shrink:0;}
+
+.detected-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 20px;opacity:0;transition:opacity .4s .2s;
+}
+.detected-bar.visible{opacity:1;}
+.detected-count{font-size:12px;color:var(--mist);}
+.detected-count strong{color:var(--ember);}
+
+.overlay-toggle-btn{
+  display:flex;align-items:center;gap:5px;background:var(--smoke);
+  border:1px solid #3a3530;border-radius:8px;padding:4px 10px 4px 8px;
+  cursor:pointer;font-family:'DM Sans',sans-serif;transition:border-color .2s,background .2s;
+}
+.overlay-toggle-btn.on{border-color:var(--lantern);background:rgba(232,66,10,.12);}
+.ot-icon{font-size:10px;font-weight:700;color:var(--mist);}
+.overlay-toggle-btn.on .ot-icon{color:var(--ember);}
+.ot-label{font-size:11px;color:var(--mist);font-weight:500;}
+.ot-switch{width:28px;height:16px;border-radius:8px;background:#3a3530;position:relative;transition:background .2s;margin-left:2px;}
+.ot-switch::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#7a7068;transition:transform .2s,background .2s;}
+.overlay-toggle-btn.on .ot-switch{background:var(--lantern);}
+.overlay-toggle-btn.on .ot-switch::after{transform:translateX(12px);background:white;}
+
+.currency-toggle{display:flex;background:var(--smoke);border-radius:8px;overflow:hidden;}
+.cur-btn{padding:4px 10px;font-size:11px;font-weight:500;color:#7a7068;cursor:pointer;border:none;background:none;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.cur-btn.active{background:var(--lantern);color:white;}
+
+.instruction-banner{
+  margin:0 16px 10px;background:var(--smoke);border-radius:14px;
+  padding:10px 14px;display:flex;align-items:center;gap:10px;
+  opacity:0;transition:opacity .4s .4s;
+}
+.instruction-banner.visible{opacity:1;}
+.ib-icon{font-size:18px;}
+.ib-text{font-size:12px;color:var(--mist);line-height:1.5;}
+.ib-text strong{color:var(--paper);}
+
+.new-photo-btn{
+  margin:0 16px 12px;padding:10px;border-radius:14px;
+  background:var(--smoke);border:1px solid #3a3530;color:var(--mist);
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:border-color .2s,color .2s;
+}
+.new-photo-btn:hover{border-color:#5a5045;color:var(--paper);}
+
+/* ── Error state ── */
+.error-box{
+  margin:0 16px 16px;padding:12px 14px;background:#1a0808;
+  border:1px solid #5a1a1a;border-radius:14px;
+  font-size:12px;color:#e07070;line-height:1.6;display:none;
+}
+
+/* ── Bottom sheet ── */
+.sheet-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,0);z-index:20;
+  pointer-events:none;transition:background .25s;
+}
+.sheet-backdrop.open{background:rgba(0,0,0,.55);pointer-events:auto;}
+.bottom-sheet{
+  position:fixed;bottom:0;left:0;right:0;background:var(--cream);
+  border-radius:28px 28px 0 0;transform:translateY(100%);
+  transition:transform .32s cubic-bezier(.32,0,.67,0);z-index:21;overflow:hidden;
+}
+.bottom-sheet.open{transform:translateY(0);transition:transform .32s cubic-bezier(.33,1,.68,1);}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:#ddd6ca;margin:12px auto 0;}
+.sheet-inner{padding:16px 22px 28px;}
+.sheet-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.sheet-jp{font-family:'Shippori Mincho',serif;font-size:24px;font-weight:700;color:var(--ink);letter-spacing:.06em;}
+.sheet-en{font-size:13px;color:#7a6f63;margin-top:2px;line-height:1.4;}
+.sheet-jpy{font-family:'Shippori Mincho',serif;font-size:22px;font-weight:700;color:var(--ink);text-align:right;}
+.sheet-usd{font-size:12px;color:var(--warn);font-weight:500;margin-top:2px;text-align:right;}
+.sheet-divider{height:1px;background:#ede8e0;margin:12px 0;}
+.sheet-desc{font-size:13px;color:#6b5f52;line-height:1.75;margin-bottom:14px;}
+.allergy-heading{font-size:10px;color:#a89f94;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px;}
+.allergy-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.tag{font-size:11px;font-weight:500;padding:4px 10px;border-radius:8px;}
+.tag-warn{background:#fff4e0;color:var(--warn);border:1px solid #ffe5a0;}
+.tag-safe{background:#e8f5ee;color:var(--safe);border:1px solid #b5ddc7;}
+.tag-danger{background:#fdecea;color:var(--danger);border:1px solid #f9c6c0;}
+.confidence-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 9px;border-radius:6px;margin-top:10px;}
+.conf-high{background:#e8f5ee;color:var(--safe);}
+.conf-low{background:#fff4e0;color:var(--warn);}
+.ai-disclaimer{margin-top:14px;background:#fff8ed;border:1px solid #ffe5a0;border-radius:12px;padding:9px 12px;display:flex;gap:8px;align-items:flex-start;}
+.ai-disclaimer span{font-size:14px;}
+.ai-disclaimer p{font-size:11px;color:#7a6030;line-height:1.6;}
+.close-sheet-btn{position:absolute;top:14px;right:18px;width:28px;height:28px;border-radius:50%;background:#ede8e0;border:none;cursor:pointer;font-size:14px;color:#6b5f52;display:flex;align-items:center;justify-content:center;}
+.bottom-pad{height:34px;}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="app-logo"><div class="logo-dot"></div>Izakaya Lens</div>
+    <div class="hint-label" id="hintLabel">Ready</div>
+  </div>
+
+  <!-- ── Upload screen ── -->
+  <div id="uploadScreen">
+    <div class="drop-zone" id="dropZone">
+      <div class="dz-icon">📷</div>
+      <div class="dz-title">Upload a menu photo</div>
+      <div class="dz-sub">Drop an image here, or tap the button below.<br>Handwritten Japanese menus work best.</div>
+      <button class="dz-btn" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">Choose Photo</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" capture="environment">
+    <button class="cam-btn" onclick="document.getElementById('fileInput').click()">
+      📸 Take a photo with camera
+    </button>
+    <div class="disclaimer-banner">
+      <div class="db-icon">⚠️</div>
+      <div class="db-text">
+        <strong>Allergy info is AI-estimated.</strong> Always confirm with staff before ordering if you have a food allergy or dietary requirement.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Result screen ── -->
+  <div id="resultScreen">
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="photo-container" id="photoContainer">
+      <img id="menuPhoto" src="" alt="Menu">
+      <div class="scan-overlay" id="scanOverlay">
+        <div class="scan-spinner"></div>
+        <div class="scan-text">Recognising menu…</div>
+        <div class="scan-progress"><div class="scan-progress-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="detected-bar" id="detectedBar">
+      <div class="detected-count" id="detectedCount"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="overlay-toggle-btn" id="overlayToggleBtn" onclick="toggleOverlay()">
+          <span class="ot-icon">EN</span>
+          <span class="ot-label">Overlay</span>
+          <span class="ot-switch"></span>
+        </button>
+        <div class="currency-toggle">
+          <button class="cur-btn active" onclick="setCurrency('USD',this)">USD</button>
+          <button class="cur-btn" onclick="setCurrency('EUR',this)">EUR</button>
+          <button class="cur-btn" onclick="setCurrency('GBP',this)">GBP</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="instruction-banner" id="instructionBanner">
+      <div class="ib-icon">👆</div>
+      <div class="ib-text"><strong>Tap any highlighted item</strong> on the menu photo to see the English translation and allergy info.</div>
+    </div>
+
+    <button class="new-photo-btn" id="newPhotoBtn" onclick="resetToUpload()" style="display:none;">
+      ← Scan another menu
+    </button>
+
+    <div class="bottom-pad"></div>
+
+    <div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSheet()"></div>
+    <div class="bottom-sheet" id="bottomSheet">
+      <div class="sheet-handle"></div>
+      <button class="close-sheet-btn" onclick="closeSheet()">✕</button>
+      <div class="sheet-inner" id="sheetContent"></div>
+    </div>
+  </div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let apiData = null;        // { items, currency_rates }
+let currentCurrency = 'USD';
+let overlayOn = false;
+
+// Allergen severity mapping
+const ALLERGEN_CLASS = {
+  Shellfish:'danger', Fish:'danger', Egg:'danger', Milk:'danger',
+  Peanut:'danger', 'Tree Nuts':'danger',
+  Soy:'warn', Wheat:'warn', Sesame:'warn', Buckwheat:'warn',
+};
+function allergenClass(a) {
+  for (const [k, v] of Object.entries(ALLERGEN_CLASS)) {
+    if (a.toLowerCase().includes(k.toLowerCase())) return v;
+  }
+  return 'warn';
+}
+
+// ── Currency helpers ─────────────────────────────────────────────────────────
+function getRate(cur) {
+  if (apiData?.currency_rates?.[cur]) return apiData.currency_rates[cur];
+  return { USD:0.0067, EUR:0.0062, GBP:0.0053 }[cur] || 0.0067;
+}
+function getSymbol(cur) { return { USD:'$', EUR:'€', GBP:'£' }[cur] || '$'; }
+
+function formatPrice(jpy, cur) {
+  if (!jpy) return '';
+  return getSymbol(cur) + (jpy * getRate(cur)).toFixed(2);
+}
+
+function setCurrency(cur, btn) {
+  currentCurrency = cur;
+  document.querySelectorAll('.cur-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (!apiData) return;
+  apiData.items.forEach((item, i) => {
+    const usdEl = document.querySelector('#sheetUsd_' + i);
+    if (usdEl && item.price_jpy) usdEl.textContent = '≈ ' + formatPrice(item.price_jpy, cur) + ' ' + cur;
+  });
+}
+
+// ── File input / drag-drop ───────────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) processFile(file);
+});
+dropZone.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) processFile(fileInput.files[0]);
+});
+
+// ── Process selected file ────────────────────────────────────────────────────
+function processFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataURL = e.target.result;
+    showResultScreen(dataURL);
+    callApi(dataURL);
+  };
+  reader.readAsDataURL(file);
+}
+
+function showResultScreen(dataURL) {
+  document.getElementById('uploadScreen').style.display = 'none';
+  const rs = document.getElementById('resultScreen');
+  rs.style.display = 'flex';
+
+  // Show the image immediately while API loads
+  document.getElementById('menuPhoto').src = dataURL;
+  document.getElementById('scanOverlay').classList.remove('hidden');
+  document.getElementById('detectedBar').classList.remove('visible');
+  document.getElementById('instructionBanner').classList.remove('visible');
+  document.getElementById('newPhotoBtn').style.display = 'none';
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('hintLabel').textContent = 'Scanning…';
+
+  // Clear previous hotspots
+  document.querySelectorAll('.hotspot').forEach(h => h.remove());
+  overlayOn = false;
+  document.getElementById('overlayToggleBtn').classList.remove('on');
+  apiData = null;
+}
+
+async function callApi(dataURL) {
+  try {
+    const resp = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_base64: dataURL }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || resp.statusText);
+    }
+
+    apiData = await resp.json();
+    renderResults();
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+// ── Render API results ───────────────────────────────────────────────────────
+function renderResults() {
+  const img = document.getElementById('menuPhoto');
+  function build() {
+    const natW = img.naturalWidth;
+    const natH = img.naturalHeight;
+    const dispW = img.clientWidth;
+    const dispH = img.clientHeight;
+    const scaleX = dispW / natW;
+    const scaleY = dispH / natH;
+    const container = document.getElementById('photoContainer');
+
+    apiData.items.forEach((item, i) => {
+      if (!item.bbox) return;
+      const b = item.bbox;
+
+      const hs = document.createElement('div');
+      hs.className = 'hotspot';
+      hs.id = 'hs' + i;
+      hs.style.left   = (b.x * scaleX) + 'px';
+      hs.style.top    = (b.y * scaleY) + 'px';
+      hs.style.width  = (b.width * scaleX) + 'px';
+      hs.style.height = (b.height * scaleY) + 'px';
+      hs.onclick = () => openSheet(i);
+
+      const badge = document.createElement('div');
+      badge.className = 'tap-badge';
+      badge.textContent = '→';
+      hs.appendChild(badge);
+
+      // Low-confidence warning badge
+      if (item.confidence === 'low') {
+        const warn = document.createElement('span');
+        warn.textContent = '⚠️';
+        warn.style.cssText = 'position:absolute;top:-8px;left:0;font-size:12px;pointer-events:none;';
+        hs.appendChild(warn);
+      }
+
+      const lbl = document.createElement('div');
+      lbl.className = 'en-overlay-label';
+      lbl.id = 'enLabel' + i;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'en-name';
+      nameSpan.textContent = item.name_en;
+
+      lbl.appendChild(nameSpan);
+      hs.appendChild(lbl);
+      container.appendChild(hs);
+    });
+
+    const count = apiData.items.length;
+    document.getElementById('detectedCount').innerHTML =
+      '<strong>' + count + ' item' + (count !== 1 ? 's' : '') + '</strong> detected · Tap to translate';
+
+    document.getElementById('scanOverlay').classList.add('hidden');
+    document.getElementById('hintLabel').textContent = count + ' item' + (count !== 1 ? 's' : '') + ' found';
+    document.getElementById('detectedBar').classList.add('visible');
+    document.getElementById('instructionBanner').classList.add('visible');
+    document.getElementById('newPhotoBtn').style.display = 'flex';
+
+    // Pulse hotspots one by one
+    apiData.items.forEach((_, i) => {
+      if (!document.getElementById('hs' + i)) return;
+      setTimeout(() => {
+        const hs = document.getElementById('hs' + i);
+        if (!hs) return;
+        hs.classList.add('pulsing');
+        setTimeout(() => hs.classList.remove('pulsing'), 700);
+      }, i * 150);
+    });
+  }
+
+  if (img.complete && img.naturalWidth) build();
+  else img.onload = build;
+}
+
+// ── Overlay toggle ───────────────────────────────────────────────────────────
+function toggleOverlay() {
+  overlayOn = !overlayOn;
+  document.getElementById('overlayToggleBtn').classList.toggle('on', overlayOn);
+  document.querySelectorAll('.en-overlay-label').forEach(el => el.classList.toggle('visible', overlayOn));
+  const ibText = document.querySelector('.ib-text');
+  if (overlayOn) {
+    ibText.innerHTML = '<strong>Overview mode ON</strong> — tap any item for full details.';
+  } else {
+    ibText.innerHTML = '<strong>Tap any highlighted item</strong> on the menu photo to see the English translation and allergy info.';
+  }
+}
+
+// ── Bottom sheet ─────────────────────────────────────────────────────────────
+function openSheet(idx) {
+  if (!apiData) return;
+  const item = apiData.items[idx];
+  document.querySelectorAll('.hotspot').forEach((h, i) => h.classList.toggle('active', i === idx));
+
+  const allergyHTML = (item.allergens || []).map(a =>
+    '<span class="tag tag-' + allergenClass(a) + '">' + a + '</span>'
+  ).join('');
+
+  const confClass = item.confidence === 'high' ? 'conf-high' : 'conf-low';
+  const confIcon  = item.confidence === 'high' ? '✓' : '⚠';
+  const confText  = item.confidence === 'high' ? 'High OCR confidence' : 'Low confidence — verify with staff';
+
+  const priceBlock = item.price_jpy
+    ? '<div class="sheet-jpy">¥' + item.price_jpy + '</div>' +
+      '<div class="sheet-usd" id="sheetUsd_' + idx + '">≈ ' + formatPrice(item.price_jpy, currentCurrency) + ' ' + currentCurrency + '</div>'
+    : '';
+
+  const cachedBadge = item.cached
+    ? '<span style="font-size:10px;color:var(--safe);background:#e8f5ee;padding:2px 8px;border-radius:6px;margin-left:6px;">✓ cached</span>'
+    : '';
+
+  document.getElementById('sheetContent').innerHTML =
+    '<div class="sheet-header">' +
+      '<div>' +
+        '<div class="sheet-jp">' + item.name_jp + cachedBadge + '</div>' +
+        '<div class="sheet-en">' + item.name_en + '</div>' +
+      '</div>' +
+      '<div>' + priceBlock + '</div>' +
+    '</div>' +
+    '<div class="sheet-divider"></div>' +
+    '<div class="sheet-desc">' + (item.description_en || '') + '</div>' +
+    (allergyHTML ? '<div><div class="allergy-heading">Allergens detected</div><div class="allergy-tags">' + allergyHTML + '</div></div>' : '') +
+    '<div class="confidence-badge ' + confClass + '">' + confIcon + ' ' + confText + '</div>' +
+    '<div class="ai-disclaimer"><span>⚠️</span><p><strong>AI-estimated.</strong> Always confirm allergy info with staff if you have a food allergy.</p></div>';
+
+  document.getElementById('sheetBackdrop').classList.add('open');
+  document.getElementById('bottomSheet').classList.add('open');
+}
+
+function closeSheet() {
+  document.getElementById('sheetBackdrop').classList.remove('open');
+  document.getElementById('bottomSheet').classList.remove('open');
+  document.querySelectorAll('.hotspot').forEach(h => h.classList.remove('active'));
+}
+
+// ── Error display ────────────────────────────────────────────────────────────
+function showError(msg) {
+  document.getElementById('scanOverlay').classList.add('hidden');
+  document.getElementById('hintLabel').textContent = 'Error';
+  const box = document.getElementById('errorBox');
+  box.style.display = 'block';
+  box.textContent = '⚠ ' + msg;
+  document.getElementById('newPhotoBtn').style.display = 'flex';
+}
+
+// ── Reset ────────────────────────────────────────────────────────────────────
+function resetToUpload() {
+  document.getElementById('resultScreen').style.display = 'none';
+  document.getElementById('uploadScreen').style.display = 'block';
+  document.getElementById('hintLabel').textContent = 'Ready';
+  fileInput.value = '';
+}
+</script>
+</body>
+</html>
